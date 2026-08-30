@@ -238,20 +238,7 @@
       <h2>Videolar</h2>
       <div class="sec-num mono">Easy German · DW Nicos Weg</div>
     </div>
-    <div class="video-grid">
-      <div class="video-card">
-        <div class="video-frame"><iframe src="https://www.youtube.com/embed/dC6ZGLzdaTs" title="Nicos Weg A1 Folge 1 - Hallo!" allowfullscreen></iframe></div>
-        <div class="video-meta"><h4>Nicos Weg — Folge 1: Hallo!</h4><p>DW · A1 · Tanishuv</p></div>
-      </div>
-      <div class="video-card">
-        <div class="video-frame"><iframe src="https://www.youtube.com/embed/upvuC9FR-xU" title="Nicos Weg A1 Folge 2 - Kein Problem!" allowfullscreen></iframe></div>
-        <div class="video-meta"><h4>Nicos Weg — Folge 2: Kein Problem!</h4><p>DW · A1 · Kundalik jumlalar</p></div>
-      </div>
-      <div class="video-card">
-        <div class="video-frame"><iframe src="https://www.youtube.com/embed/3iV2WK1-IV8" title="Easy German Street Interview - Dresden" allowfullscreen></iframe></div>
-        <div class="video-meta"><h4>Street Interviews — Dresden</h4><p>Easy German · A2–B1 · Tirik nutq</p></div>
-      </div>
-    </div>
+    <div class="video-grid" id="videoGrid"></div>
     <p style="margin-top:20px;font-size:13.5px;color:var(--grey);">To'liq Nicos Weg kursi: <a href="https://www.youtube.com/playlist?list=PLs7zUO7VPyJ6eoN6SmB1UcwvPUagK87ix" target="_blank" style="text-decoration:underline;">DW playlist →</a></p>
   </div>
 </section>
@@ -290,12 +277,13 @@ const firebaseConfig = {
   appId: "1:458908993634:web:c5b9a6334629ba01baa93b"
 };
 let firebaseReady = false;
-let lessonsRef = null, quizRef = null;
+let lessonsRef = null, quizRef = null, videosRef = null;
 try{
   if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
     firebase.initializeApp(firebaseConfig);
     lessonsRef = firebase.database().ref('lessons');
     quizRef = firebase.database().ref('quiz');
+    videosRef = firebase.database().ref('videos');
     firebaseReady = true;
   }
 }catch(e){ console.warn('Firebase ulanmadi:', e); }
@@ -342,9 +330,15 @@ const defaultQuiz = [
   {q:'"das Kind" — bu qaysi artikel guruhi?', opts:['der','die','das'], correct:2},
   {q:'"Wo?" so\'rog\'i nimani so\'raydi?', opts:['Qachon?','Qayerda?','Kim?'], correct:1},
 ];
+const defaultVideos = [
+  {videoId:'dC6ZGLzdaTs', title:'Nicos Weg — Folge 1: Hallo!', meta:'DW · A1 · Tanishuv'},
+  {videoId:'upvuC9FR-xU', title:'Nicos Weg — Folge 2: Kein Problem!', meta:'DW · A1 · Kundalik jumlalar'},
+  {videoId:'3iV2WK1-IV8', title:'Street Interviews — Dresden', meta:'Easy German · A2–B1 · Tirik nutq'},
+];
 
 let lessons = defaultLessons.slice();
 let quizData = defaultQuiz.slice();
+let videos = defaultVideos.slice();
 
 if(firebaseReady){
   lessonsRef.on('value', snap => {
@@ -357,7 +351,22 @@ if(firebaseReady){
     document.getElementById('quizResult').style.display='none';
     loadQuestion();
   });
+  videosRef.on('value', snap => {
+    videos = snap.exists() ? snap.val() : (videosRef.set(defaultVideos), defaultVideos.slice());
+    renderVideos();
+  });
 }
+
+function renderVideos(){
+  const grid = document.getElementById('videoGrid');
+  if(!grid) return;
+  grid.innerHTML = videos.map(v => `
+    <div class="video-card">
+      <div class="video-frame"><iframe src="https://www.youtube.com/embed/${v.videoId}" title="${v.title}" allowfullscreen></iframe></div>
+      <div class="video-meta"><h4>${v.title}</h4><p>${v.meta || ''}</p></div>
+    </div>`).join('');
+}
+if(!firebaseReady){ renderVideos(); }
 
 /* ---------- Public: Lessons render ---------- */
 function renderLessons(){
