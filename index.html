@@ -113,6 +113,7 @@
   .chat-input-row input{flex:1;border:none;background:var(--paper);padding:16px;font-family:'Work Sans';font-size:14.5px;outline:none;}
   .chat-input-row button{border:none;border-left:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:0 22px;font-family:'Space Grotesk';font-weight:600;cursor:pointer;}
   .chat-input-row button:hover{background:var(--red);}
+  .chat-key-row{display:none;}
 
   .video-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;}
   .video-card{border:2px solid var(--ink);background:var(--paper-2);}
@@ -213,7 +214,7 @@
   <div class="wrap">
     <div class="sec-head">
       <h2>AI Suhbat — Sprachpartner</h2>
-      <div class="sec-num mono">Live · Claude</div>
+      <div class="sec-num mono">Live · Groq</div>
     </div>
     <div class="chat-shell">
       <div class="chat-log" id="chatLog">
@@ -223,6 +224,11 @@
         <div class="chip" onclick="sendSuggested('Menga o\'zimni nemischa tanishtirishni o\'rgat')">O'zimni tanishtirish</div>
         <div class="chip" onclick="sendSuggested('der/die/das ni qanday eslab qolsam bo\'ladi?')">der/die/das</div>
         <div class="chip" onclick="sendSuggested('Restoranda buyurtma berish uchun jumlalar')">Restoranda</div>
+      </div>
+      <div class="chat-key-row">
+        <label for="groqKey" class="mono">Groq API key:</label>
+        <input type="password" id="groqKey" placeholder="gsk_...">
+        <span class="saved" id="keySavedMsg"></span>
       </div>
       <div class="chat-input-row">
         <input type="text" id="chatInput" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter')sendChat()">
@@ -450,9 +456,32 @@ else {
   document.getElementById('qProgress').textContent = 'Yuklanmoqda...';
 }
 
-/* ---------- AI Chat ---------- */
+/* ---------- AI Chat (Groq) ---------- */
+const GROQ_MODEL = 'llama-3.1-8b-instant';
+// Default kalit koddagi shu yerga yoziladi (foydalanuvchi so'rovi bo'yicha).
+// DIQQAT: bu fayl ochiq ulashilsa yoki manba kodi ko'rilsa, kalit ham ko'rinadi.
+const DEFAULT_GROQ_KEY = "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";
+const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring qisqa, do'stona va rag'batlantiruvchi bo'lsin (3-5 jumla). Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat.";
+
 const chatLog = document.getElementById('chatLog');
+const keyInput = document.getElementById('groqKey');
+const keySavedMsg = document.getElementById('keySavedMsg');
 let chatHistory = [];
+
+// Avval brauzerda saqlangan kalit bo'lsa o'shani, bo'lmasa koddagi default kalitni ishlatamiz.
+const savedKey = localStorage.getItem('tsdeutsch_groq_key');
+keyInput.value = savedKey || DEFAULT_GROQ_KEY;
+keySavedMsg.textContent = savedKey ? 'saqlangan ✓' : (DEFAULT_GROQ_KEY ? 'default ✓' : '');
+keyInput.addEventListener('change', ()=>{
+  if(keyInput.value.trim()){
+    localStorage.setItem('tsdeutsch_groq_key', keyInput.value.trim());
+    keySavedMsg.textContent = 'saqlandi ✓';
+  } else {
+    localStorage.removeItem('tsdeutsch_groq_key');
+    keySavedMsg.textContent = '';
+  }
+});
+
 function addBubble(text, who){
   const b = document.createElement('div');
   b.className = 'bubble ' + who;
@@ -469,30 +498,57 @@ async function sendChat(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if(!text) return;
+
+  const apiKey = keyInput.value.trim() || DEFAULT_GROQ_KEY;
+  if(!apiKey){
+    addBubble("Iltimos, avval yuqoridagi maydonga Groq API kalitingizni kiriting (console.groq.com'dan bepul olinadi).", 'bot');
+    keyInput.focus();
+    return;
+  }
+
   addBubble(text, 'user');
   chatHistory.push({role:'user', content: text});
   input.value = '';
   const thinking = addBubble('yozmoqda...', 'bot thinking');
+
   try{
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system: "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring qisqa, do'stona va rag'batlantiruvchi bo'lsin (3-5 jumla). Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat.",
-        messages: chatHistory
-      })
-    });
+    const messages = [
+      { role: 'system', content: CHAT_SYSTEM },
+      ...chatHistory.map(m => ({ role: m.role, content: m.content }))
+    ];
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 400
+        })
+      }
+    );
+
     const data = await response.json();
     thinking.remove();
-    const reply = data.content && data.content.find(c=>c.type==='text');
-    const replyText = reply ? reply.text : "Kechirasiz, javob berishda muammo yuz berdi.";
+
+    if(data.error){
+      addBubble("Xatolik: " + (data.error.message || "API kalitni tekshiring."), 'bot');
+      return;
+    }
+
+    const replyText = data.choices?.[0]?.message?.content
+      || "Kechirasiz, javob berishda muammo yuz berdi.";
     addBubble(replyText, 'bot');
     chatHistory.push({role:'assistant', content: replyText});
   }catch(e){
     thinking.remove();
-    addBubble("Ulanishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.", 'bot');
+    addBubble("Ulanishda xatolik yuz berdi. Internet aloqasi va API kalitni tekshirib, qayta urinib ko'ring.", 'bot');
   }
 }
 </script>
