@@ -104,6 +104,7 @@
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="tabLessons" onclick="switchTab('tabLessons')">Darslar</button>
         <button class="tab-btn" data-tab="tabQuiz" onclick="switchTab('tabQuiz')">Test</button>
+        <button class="tab-btn" data-tab="tabVideos" onclick="switchTab('tabVideos')">Videolar</button>
         <button class="tab-btn" data-tab="tabData" onclick="switchTab('tabData')">Ma'lumotlar</button>
         <button class="btn small ghost" style="margin-left:auto;" onclick="adminLogout()">Chiqish</button>
       </div>
@@ -143,8 +144,23 @@
         </div>
       </div>
 
+      <div id="tabVideos" class="admin-panel">
+        <div class="admin-list" id="adminVideoList"></div>
+        <div class="admin-form">
+          <h4 id="videoFormTitle">Yangi video qo'shish</h4>
+          <input type="hidden" id="videoEditIndex" value="-1">
+          <div class="field"><label>YouTube linki (yoki video ID)</label><input type="text" id="vFieldUrl" placeholder="https://www.youtube.com/watch?v=..."></div>
+          <div class="field"><label>Sarlavha</label><input type="text" id="vFieldTitle" placeholder="masalan: Nicos Weg — Folge 3"></div>
+          <div class="field"><label>Tavsif (ixtiyoriy)</label><input type="text" id="vFieldMeta" placeholder="masalan: DW · A1 · Oila"></div>
+          <div class="form-actions">
+            <button class="btn small" onclick="saveVideoForm()">Saqlash</button>
+            <button class="btn small ghost" onclick="resetVideoForm()">Bekor qilish</button>
+          </div>
+        </div>
+      </div>
+
       <div id="tabData" class="admin-panel">
-        <p class="data-note">Barcha darslar va test savollari Firebase Realtime Database'da saqlanadi va sayt tomonida avtomatik ko'rinadi. Zaxira nusxa olish yoki boshqa loyihaga ko'chirish uchun JSON eksport/import qiling.</p>
+        <p class="data-note">Barcha darslar, test savollari va videolar Firebase Realtime Database'da saqlanadi va sayt tomonida avtomatik ko'rinadi. Zaxira nusxa olish yoki boshqa loyihaga ko'chirish uchun JSON eksport/import qiling.</p>
         <div class="data-actions">
           <button class="btn small" onclick="exportData()">JSON eksport qilish</button>
           <label class="btn small ghost" style="cursor:pointer;">JSON import qilish<input type="file" accept="application/json" style="display:none;" onchange="importData(event)"></label>
@@ -171,12 +187,13 @@ const firebaseConfig = {
 };
 const ADMIN_CODE = 'sprachwerk2026';
 let firebaseReady = false;
-let lessonsRef = null, quizRef = null;
+let lessonsRef = null, quizRef = null, videosRef = null;
 try{
   if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
     firebase.initializeApp(firebaseConfig);
     lessonsRef = firebase.database().ref('lessons');
     quizRef = firebase.database().ref('quiz');
+    videosRef = firebase.database().ref('videos');
     firebaseReady = true;
   }
 }catch(e){ console.warn('Firebase ulanmadi:', e); }
@@ -227,9 +244,15 @@ const defaultQuiz = [
   {q:'"das Kind" — bu qaysi artikel guruhi?', opts:['der','die','das'], correct:2},
   {q:'"Wo?" so\'rog\'i nimani so\'raydi?', opts:['Qachon?','Qayerda?','Kim?'], correct:1},
 ];
+const defaultVideos = [
+  {videoId:'dC6ZGLzdaTs', title:'Nicos Weg — Folge 1: Hallo!', meta:'DW · A1 · Tanishuv'},
+  {videoId:'upvuC9FR-xU', title:'Nicos Weg — Folge 2: Kein Problem!', meta:'DW · A1 · Kundalik jumlalar'},
+  {videoId:'3iV2WK1-IV8', title:'Street Interviews — Dresden', meta:'Easy German · A2–B1 · Tirik nutq'},
+];
 
 let lessons = defaultLessons.slice();
 let quizData = defaultQuiz.slice();
+let videos = defaultVideos.slice();
 
 function saveLessonsToStore(arr){
   lessons = arr;
@@ -239,6 +262,10 @@ function saveQuizToStore(arr){
   quizData = arr;
   if(firebaseReady){ quizRef.set(arr); } else { renderAdminQuizList(); }
 }
+function saveVideosToStore(arr){
+  videos = arr;
+  if(firebaseReady){ videosRef.set(arr); } else { renderAdminVideoList(); }
+}
 if(firebaseReady){
   lessonsRef.on('value', snap => {
     lessons = snap.exists() ? snap.val() : (lessonsRef.set(defaultLessons), defaultLessons.slice());
@@ -247,6 +274,10 @@ if(firebaseReady){
   quizRef.on('value', snap => {
     quizData = snap.exists() ? snap.val() : (quizRef.set(defaultQuiz), defaultQuiz.slice());
     renderAdminQuizList();
+  });
+  videosRef.on('value', snap => {
+    videos = snap.exists() ? snap.val() : (videosRef.set(defaultVideos), defaultVideos.slice());
+    renderAdminVideoList();
   });
 }
 
@@ -259,6 +290,7 @@ function adminLogin(){
     document.getElementById('adminPanelWrap').style.display='block';
     renderAdminLessonList();
     renderAdminQuizList();
+    renderAdminVideoList();
   } else {
     document.getElementById('adminError').textContent = "Noto'g'ri kod. Qayta urinib ko'ring.";
   }
@@ -280,6 +312,7 @@ function switchTab(id){
   document.querySelectorAll('.admin-panel').forEach(p=>p.classList.toggle('active', p.id===id));
   if(id==='tabLessons') renderAdminLessonList();
   if(id==='tabQuiz') renderAdminQuizList();
+  if(id==='tabVideos') renderAdminVideoList();
 }
 
 /* ---------- Lessons CRUD ---------- */
@@ -384,9 +417,71 @@ function saveQuizForm(){
   resetQuizForm();
 }
 
+/* ---------- Videos CRUD ---------- */
+function extractYouTubeId(input){
+  input = input.trim();
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
+    /(?:youtu\.be\/)([\w-]{11})/,
+    /(?:youtube\.com\/embed\/)([\w-]{11})/,
+    /(?:youtube\.com\/shorts\/)([\w-]{11})/
+  ];
+  for(const p of patterns){ const m = input.match(p); if(m) return m[1]; }
+  if(/^[\w-]{11}$/.test(input)) return input;
+  return null;
+}
+function renderAdminVideoList(){
+  const list = document.getElementById('adminVideoList');
+  if(!list) return;
+  if(videos.length===0){ list.innerHTML = '<div class="admin-empty">Hozircha videolar yo\'q.</div>'; return; }
+  list.innerHTML = videos.map((v,i)=>`
+    <div class="admin-row">
+      <span class="arow-title">${v.title}</span>
+      <button class="btn small ghost" onclick="editVideo(${i})">Tahrirlash</button>
+      <button class="btn small danger" onclick="deleteVideo(${i})">O'chirish</button>
+    </div>`).join('');
+}
+function resetVideoForm(){
+  document.getElementById('videoEditIndex').value = -1;
+  document.getElementById('videoFormTitle').textContent = "Yangi video qo'shish";
+  document.getElementById('vFieldUrl').value = '';
+  document.getElementById('vFieldTitle').value = '';
+  document.getElementById('vFieldMeta').value = '';
+}
+function editVideo(i){
+  const v = videos[i];
+  document.getElementById('videoEditIndex').value = i;
+  document.getElementById('videoFormTitle').textContent = "Videoni tahrirlash";
+  document.getElementById('vFieldUrl').value = 'https://www.youtube.com/watch?v=' + v.videoId;
+  document.getElementById('vFieldTitle').value = v.title;
+  document.getElementById('vFieldMeta').value = v.meta || '';
+  document.querySelector('#tabVideos .admin-form').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function deleteVideo(i){
+  if(!confirm("Videoni o'chirishni tasdiqlaysizmi?")) return;
+  const arr = videos.slice();
+  arr.splice(i,1);
+  saveVideosToStore(arr);
+}
+function saveVideoForm(){
+  const url = document.getElementById('vFieldUrl').value.trim();
+  const title = document.getElementById('vFieldTitle').value.trim();
+  const meta = document.getElementById('vFieldMeta').value.trim();
+  const videoId = extractYouTubeId(url);
+  if(!videoId){ alert("YouTube link noto'g'ri. To'liq link yoki video ID kiriting."); return; }
+  if(!title){ alert("Sarlavha kiriting."); return; }
+  const idx = parseInt(document.getElementById('videoEditIndex').value, 10);
+  const entry = {videoId, title, meta};
+  const arr = videos.slice();
+  if(idx >= 0){ arr[idx] = entry; }
+  else { arr.push(entry); }
+  saveVideosToStore(arr);
+  resetVideoForm();
+}
+
 /* ---------- Data management ---------- */
 function exportData(){
-  const payload = {lessons, quiz: quizData, exportedAt: new Date().toISOString()};
+  const payload = {lessons, quiz: quizData, videos, exportedAt: new Date().toISOString()};
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -404,6 +499,7 @@ function importData(event){
       const data = JSON.parse(e.target.result);
       if(Array.isArray(data.lessons)){ saveLessonsToStore(data.lessons); }
       if(Array.isArray(data.quiz)){ saveQuizToStore(data.quiz); }
+      if(Array.isArray(data.videos)){ saveVideosToStore(data.videos); }
       document.getElementById('dataStatus').textContent = "Import muvaffaqiyatli yakunlandi.";
     }catch(err){
       document.getElementById('dataStatus').textContent = "Xatolik: fayl noto'g'ri formatda.";
@@ -413,15 +509,17 @@ function importData(event){
   event.target.value = '';
 }
 function resetAllData(){
-  if(!confirm("Barcha darslar va savollar boshlang'ich holatga qaytariladi. Davom etasizmi?")) return;
+  if(!confirm("Barcha darslar, savollar va videolar boshlang'ich holatga qaytariladi. Davom etasizmi?")) return;
   saveLessonsToStore(defaultLessons.slice());
   saveQuizToStore(defaultQuiz.slice());
+  saveVideosToStore(defaultVideos.slice());
   document.getElementById('dataStatus').textContent = "Boshlang'ich holatga qaytarildi.";
 }
 
 /* init */
 renderAdminLessonList();
 renderAdminQuizList();
+renderAdminVideoList();
 </script>
 </body>
 </html>
