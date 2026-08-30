@@ -461,7 +461,7 @@ const GROQ_MODEL = 'openai/gpt-oss-20b';
 // Default kalit koddagi shu yerga yoziladi (foydalanuvchi so'rovi bo'yicha).
 // DIQQAT: bu fayl ochiq ulashilsa yoki manba kodi ko'rilsa, kalit ham ko'rinadi.
 const DEFAULT_GROQ_KEY = "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";
-const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring qisqa, do'stona va rag'batlantiruvchi bo'lsin (3-5 jumla). Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat.";
+const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring odatda qisqa (3-5 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy nasriy matn yoz, xuddi telefonda do'stingga yozayotgandek.";
 
 const chatLog = document.getElementById('chatLog');
 const keyInput = document.getElementById('groqKey');
@@ -482,10 +482,23 @@ keyInput.addEventListener('change', ()=>{
   }
 });
 
+function cleanMarkdown(text){
+  return text
+    .replace(/\|/g, ' ')                    // jadval belgilarini olib tashlash
+    .replace(/^#{1,6}\s*/gm, '')             // sarlavha belgilari (#, ##, ###)
+    .replace(/\*\*(.*?)\*\*/g, '$1')         // qalin matn **so'z**
+    .replace(/\*(.*?)\*/g, '$1')             // qiyshiq matn *so'z*
+    .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')   // kod belgilari
+    .replace(/^\s*[-*]\s+/gm, '')            // ro'yxat belgilari (-, *)
+    .replace(/^-{3,}\s*$/gm, '')             // ajratuvchi chiziqlar
+    .replace(/[ \t]{2,}/g, ' ')              // ortiqcha bo'shliqlar
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 function addBubble(text, who){
   const b = document.createElement('div');
   b.className = 'bubble ' + who;
-  b.textContent = text;
+  b.textContent = who === 'bot' ? cleanMarkdown(text) : text;
   chatLog.appendChild(b);
   chatLog.scrollTop = chatLog.scrollHeight;
   return b;
@@ -529,7 +542,7 @@ async function sendChat(){
           model: GROQ_MODEL,
           messages: messages,
           temperature: 0.7,
-          max_tokens: 400
+          max_tokens: 800
         })
       }
     );
