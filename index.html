@@ -103,7 +103,10 @@
   .chat-shell{border:2px solid var(--ink);background:var(--paper-2);display:flex;flex-direction:column;height:520px;max-width:640px;}
   .chat-log{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;}
   .bubble{max-width:80%;padding:12px 16px;font-size:14.5px;border:1.5px solid var(--ink);white-space:pre-wrap;line-height:1.6;}
-  .bubble.bot{max-width:88%;}
+  .bubble.bot{max-width:88%;display:flex;flex-direction:column;gap:8px;}
+  .speak-btn{align-self:flex-start;border:1.5px solid var(--ink);background:var(--paper);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;font-family:'JetBrains Mono';}
+  .speak-btn:hover{background:var(--yellow);}
+  .speak-btn.speaking{background:var(--blue);color:#fff;border-color:var(--blue);}
   .bubble.bot{background:var(--paper);align-self:flex-start;border-bottom-left-radius:0;}
   .bubble.user{background:var(--yellow);align-self:flex-end;border-bottom-right-radius:0;}
   .bubble.thinking{color:var(--grey);font-style:italic;}
@@ -462,7 +465,7 @@ const GROQ_MODEL = 'openai/gpt-oss-20b';
 // Default kalit koddagi shu yerga yoziladi (foydalanuvchi so'rovi bo'yicha).
 // DIQQAT: bu fayl ochiq ulashilsa yoki manba kodi ko'rilsa, kalit ham ko'rinadi.
 const DEFAULT_GROQ_KEY = "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";
-const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring odatda qisqa (2-4 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar bir nechta misol yoki jumla keltirsang, HAR BIRINI YANGI QATORDA yoz (ular orasiga bo'sh qator qo'y), hech qachon hammasini bitta uzun paragrafga zichlab yozma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy nasriy matn yoz, xuddi telefonda do'stingga yozayotgandek, lekin har bir alohida fikr/misolni yangi qatordan boshla.";
+const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, nemischa so'z va jumlalarni to'g'ridan-to'g'ri (tirnoqsiz) yoz. Javoblaring odatda qisqa (2-4 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar bir nechta misol yoki jumla keltirsang, HAR BIRINI YANGI QATORDA yoz (ular orasiga bo'sh qator qo'y), hech qachon hammasini bitta uzun paragrafga zichlab yozma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Tirnoq (\" \") va qavs ( ) belgilarini imkon qadar kamroq ishlat — nemischa jumlani alohida qatorga, uning o'zbekcha ma'nosini keyingi qatorga oddiy tire (—) bilan yoz. Talaffuzni matnda yozma (fonetik transkripsiya yozma) — foydalanuvchi talaffuzni tovush tugmasi orqali eshitadi. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy matn yoz.";
 
 const chatLog = document.getElementById('chatLog');
 const keyInput = document.getElementById('groqKey');
@@ -496,10 +499,43 @@ function cleanMarkdown(text){
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+function speakText(text, btn){
+  if(!('speechSynthesis' in window)){
+    alert("Bu brauzer ovozli o'qishni qo'llab-quvvatlamaydi.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'de-DE';
+  utter.rate = 0.92;
+  const voices = window.speechSynthesis.getVoices();
+  const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
+  if(deVoice) utter.voice = deVoice;
+  if(btn){
+    btn.classList.add('speaking');
+    utter.onend = () => btn.classList.remove('speaking');
+    utter.onerror = () => btn.classList.remove('speaking');
+  }
+  window.speechSynthesis.speak(utter);
+}
 function addBubble(text, who){
   const b = document.createElement('div');
   b.className = 'bubble ' + who;
-  b.textContent = who === 'bot' ? cleanMarkdown(text) : text;
+  if(who === 'bot'){
+    const clean = cleanMarkdown(text);
+    const textSpan = document.createElement('span');
+    textSpan.textContent = clean;
+    b.appendChild(textSpan);
+    const speakBtn = document.createElement('button');
+    speakBtn.className = 'speak-btn';
+    speakBtn.type = 'button';
+    speakBtn.title = "Ovozda eshitish";
+    speakBtn.textContent = '🔊';
+    speakBtn.onclick = () => speakText(clean, speakBtn);
+    b.appendChild(speakBtn);
+  } else {
+    b.textContent = text;
+  }
   chatLog.appendChild(b);
   chatLog.scrollTop = chatLog.scrollHeight;
   return b;
