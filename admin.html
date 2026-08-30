@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprachwerk — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --paper:#EEEEE4;
+    --paper-2:#E5E4D6;
+    --ink:#17171C;
+    --red:#D6402C;
+    --blue:#24509E;
+    --yellow:#F2B705;
+    --grey:#8A897F;
+    --line: rgba(23,23,28,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Work Sans', sans-serif;line-height:1.5;}
+  h1,h2,h3,.disp{font-family:'Space Grotesk', sans-serif;letter-spacing:-0.01em;margin:0;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  a{color:inherit;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 28px;}
+
+  header{border-bottom:2px solid var(--ink);background:var(--paper);}
+  .headbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;max-width:900px;margin:0 auto;}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:20px;}
+  .logo .dot{width:14px;height:14px;background:var(--red);border-radius:50%;display:inline-block;}
+  .logo .tag{font-family:'JetBrains Mono';font-size:11px;color:var(--red);border:1px solid var(--red);padding:2px 7px;margin-left:4px;}
+
+  main{padding:44px 0 80px;}
+  h2{font-size:28px;margin-bottom:4px;}
+  .sub{font-family:'JetBrains Mono';font-size:12.5px;color:var(--grey);margin-bottom:32px;}
+
+  .btn{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;padding:13px 22px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:transform .12s ease;}
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink);}
+  .btn.ghost{background:transparent;color:var(--ink);}
+  .btn.small{padding:8px 14px;font-size:13px;}
+  .btn.danger{background:var(--red);border-color:var(--red);}
+  .btn.danger:hover{box-shadow:4px 4px 0 var(--red);}
+
+  .admin-gate{border:2px solid var(--ink);background:var(--paper-2);padding:34px;max-width:420px;}
+  .admin-gate p{font-size:13.5px;color:var(--grey);margin-top:8px;}
+  .admin-gate input{width:100%;padding:12px 14px;border:2px solid var(--ink);background:var(--paper);font-family:'JetBrains Mono';font-size:14px;margin:14px 0;}
+  .admin-note{font-family:'JetBrains Mono';font-size:11.5px;color:var(--grey);margin-top:10px;line-height:1.5;}
+
+  .tab-bar{display:flex;gap:2px;margin-bottom:24px;border-bottom:2px solid var(--ink);}
+  .tab-btn{font-family:'Space Grotesk';font-weight:600;font-size:14px;padding:11px 18px;background:none;border:none;cursor:pointer;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-2px;}
+  .tab-btn.active{color:var(--ink);border-bottom:3px solid var(--red);}
+  .admin-panel{display:none;}
+  .admin-panel.active{display:block;}
+  .admin-list{border:2px solid var(--ink);background:var(--paper-2);margin-bottom:28px;}
+  .admin-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);}
+  .admin-row:last-child{border-bottom:none;}
+  .admin-row .arow-title{flex:1;font-size:14.5px;font-weight:500;}
+  .admin-row .arow-tag{font-family:'JetBrains Mono';font-size:11px;border:1px solid var(--ink);padding:2px 7px;}
+  .admin-empty{padding:24px;text-align:center;color:var(--grey);font-size:14px;}
+  .admin-form{border:2px solid var(--ink);background:var(--paper-2);padding:24px;}
+  .admin-form h4{font-family:'Space Grotesk';font-size:16px;margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-family:'JetBrains Mono';font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin-bottom:6px;}
+  .field input[type=text], .field textarea, .field select{width:100%;padding:10px 12px;border:1.5px solid var(--ink);background:var(--paper);font-family:'Work Sans';font-size:14px;}
+  .field textarea{min-height:100px;resize:vertical;font-family:'JetBrains Mono';font-size:12.5px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .opt-edit-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .opt-edit-row input[type=text]{flex:1;}
+  .form-actions{display:flex;gap:10px;margin-top:18px;}
+  .data-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+  .data-note{font-size:13.5px;color:var(--grey);max-width:60ch;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="headbar">
+    <div class="logo"><span class="dot"></span>Sprachwerk<span class="tag">ADMIN</span></div>
+    <a href="deutsch-lernen.html" class="btn small ghost">← Saytga qaytish</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h2>Boshqaruv paneli</h2>
+    <div class="sub" id="fbStatusNote">Tekshirilmoqda...</div>
+
+    <div id="adminGate">
+      <div class="admin-gate">
+        <h3>Kirish</h3>
+        <p>Darslar, test savollari va ma'lumotlarni boshqarish uchun admin kodini kiriting.</p>
+        <input type="password" id="adminPass" placeholder="Admin kodi" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button class="btn" onclick="adminLogin()">Kirish</button>
+        <div id="adminError" style="color:var(--red);font-size:13px;margin-top:8px;"></div>
+        <div class="admin-note">Bu faqat brauzer darajasidagi oddiy himoya (parol), Firebase Authentication emas. Standart kod: <b>sprachwerk2026</b> — buni skript ichidagi ADMIN_CODE o'zgaruvchisidan o'zgartiring.</div>
+      </div>
+    </div>
+
+    <div id="adminPanelWrap" style="display:none;">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tabLessons" onclick="switchTab('tabLessons')">Darslar</button>
+        <button class="tab-btn" data-tab="tabQuiz" onclick="switchTab('tabQuiz')">Test</button>
+        <button class="tab-btn" data-tab="tabData" onclick="switchTab('tabData')">Ma'lumotlar</button>
+        <button class="btn small ghost" style="margin-left:auto;" onclick="adminLogout()">Chiqish</button>
+      </div>
+
+      <div id="tabLessons" class="admin-panel active">
+        <div class="admin-list" id="adminLessonList"></div>
+        <div class="admin-form">
+          <h4 id="lessonFormTitle">Yangi dars qo'shish</h4>
+          <input type="hidden" id="lessonEditIndex" value="-1">
+          <div class="field-row">
+            <div class="field"><label>Sarlavha</label><input type="text" id="lFieldTitle" placeholder="masalan: Ko'plik shakllari"></div>
+            <div class="field"><label>Daraja</label><select id="lFieldLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option></select></div>
+          </div>
+          <div class="field"><label>Mazmuni (HTML, jadval uchun &lt;table&gt; ishlatishingiz mumkin)</label><textarea id="lFieldBody" placeholder="Dars matni..."></textarea></div>
+          <div class="form-actions">
+            <button class="btn small" onclick="saveLessonForm()">Saqlash</button>
+            <button class="btn small ghost" onclick="resetLessonForm()">Bekor qilish</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabQuiz" class="admin-panel">
+        <div class="admin-list" id="adminQuizList"></div>
+        <div class="admin-form">
+          <h4 id="quizFormTitle">Yangi savol qo'shish</h4>
+          <input type="hidden" id="quizEditIndex" value="-1">
+          <div class="field"><label>Savol matni</label><input type="text" id="qFieldText" placeholder="masalan: der Tisch qaysi guruhga tegishli?"></div>
+          <div class="field"><label>Variantlar (to'g'ri javobni belgilang)</label>
+            <div class="opt-edit-row"><input type="radio" name="correctOpt" value="0" checked><input type="text" id="qOpt0" placeholder="1-variant"></div>
+            <div class="opt-edit-row"><input type="radio" name="correctOpt" value="1"><input type="text" id="qOpt1" placeholder="2-variant"></div>
+            <div class="opt-edit-row"><input type="radio" name="correctOpt" value="2"><input type="text" id="qOpt2" placeholder="3-variant (ixtiyoriy)"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn small" onclick="saveQuizForm()">Saqlash</button>
+            <button class="btn small ghost" onclick="resetQuizForm()">Bekor qilish</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabData" class="admin-panel">
+        <p class="data-note">Barcha darslar va test savollari Firebase Realtime Database'da saqlanadi va sayt tomonida avtomatik ko'rinadi. Zaxira nusxa olish yoki boshqa loyihaga ko'chirish uchun JSON eksport/import qiling.</p>
+        <div class="data-actions">
+          <button class="btn small" onclick="exportData()">JSON eksport qilish</button>
+          <label class="btn small ghost" style="cursor:pointer;">JSON import qilish<input type="file" accept="application/json" style="display:none;" onchange="importData(event)"></label>
+          <button class="btn small danger" onclick="resetAllData()">Boshlang'ich holatga qaytarish</button>
+        </div>
+        <div id="dataStatus" class="admin-note"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ---------- Firebase ---------- */
+// TODO: shu firebaseConfig ni deutsch-lernen.html faylidagi bilan bir xil qiling
+// (ikkala fayl ham bitta Firebase loyihasiga ulanishi kerak).
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+const ADMIN_CODE = 'sprachwerk2026';
+let firebaseReady = false;
+let lessonsRef = null, quizRef = null;
+try{
+  if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
+    firebase.initializeApp(firebaseConfig);
+    lessonsRef = firebase.database().ref('lessons');
+    quizRef = firebase.database().ref('quiz');
+    firebaseReady = true;
+  }
+}catch(e){ console.warn('Firebase ulanmadi:', e); }
+document.getElementById('fbStatusNote').textContent = firebaseReady
+  ? '✓ Firebase ulangan — o\'zgarishlar saytda darhol ko\'rinadi.'
+  : '⚠ Firebase hali ulanmagan — skriptdagi firebaseConfig ni to\'ldiring. Hozircha o\'zgarishlar faqat shu sahifada (saqlanmaydi).';
+
+/* ---------- Default data (seed + fallback) ---------- */
+const defaultLessons = [
+  {lvl:'A1', title:'Alifbo va talaffuz', body:`Nemis alifbosi lotin alifbosiga o'xshaydi, lekin qo'shimcha harflar bor: ä, ö, ü, ß.
+    <table><tr><th>Harf</th><th>Talaffuz</th><th>Misol</th></tr>
+    <tr><td>ä</td><td>"e" ga yaqin</td><td>Mädchen (qiz)</td></tr>
+    <tr><td>ö</td><td>lablar yumaloq "e"</td><td>schön (chiroyli)</td></tr>
+    <tr><td>ü</td><td>lablar yumaloq "i"</td><td>über (ustida)</td></tr>
+    <tr><td>ß</td><td>qattiq "s"</td><td>Straße (ko'cha)</td></tr></table>`},
+  {lvl:'A1', title:'Artikellar: der, die, das', body:`Nemis tilida har bir ot o'z artikliga ega — jinsi tasodifiy tanlanmaydi, yodlab olinadi. <b>der</b> (erkak jinsi, doira/ko'k), <b>die</b> (ayol jinsi, uchburchak/sariq), <b>das</b> (neytral, kvadrat/qizil).
+    <table><tr><th>Artikel</th><th>Ko'plik</th><th>Misol</th></tr>
+    <tr><td>der</td><td>die</td><td>der Tisch → die Tische</td></tr>
+    <tr><td>die</td><td>die</td><td>die Frau → die Frauen</td></tr>
+    <tr><td>das</td><td>die</td><td>das Kind → die Kinder</td></tr></table>`},
+  {lvl:'A1', title:"Fe'l tuslanishi (Präsens)", body:`Hozirgi zamonda fe'l shaxsga qarab o'zgaradi. "machen" (qilmoq) fe'li misolida:
+    <table><tr><th>Shaxs</th><th>Shakl</th></tr>
+    <tr><td>ich</td><td>mache</td></tr>
+    <tr><td>du</td><td>machst</td></tr>
+    <tr><td>er/sie/es</td><td>macht</td></tr>
+    <tr><td>wir</td><td>machen</td></tr>
+    <tr><td>ihr</td><td>macht</td></tr>
+    <tr><td>sie/Sie</td><td>machen</td></tr></table>`},
+  {lvl:'A1', title:"Kundalik so'zlar", body:`Eng ko'p ishlatiladigan so'zlar:
+    <table><tr><th>Nemischa</th><th>O'zbekcha</th></tr>
+    <tr><td>Guten Tag</td><td>Assalomu alaykum / Xayrli kun</td></tr>
+    <tr><td>Danke</td><td>Rahmat</td></tr>
+    <tr><td>Bitte</td><td>Marhamat / Iltimos</td></tr>
+    <tr><td>Wie geht's?</td><td>Qalaysiz?</td></tr>
+    <tr><td>Tschüss</td><td>Xayr</td></tr></table>`},
+  {lvl:'A2', title:"Savol so'zlari", body:`Savol berish uchun asosiy so'zlar:
+    <table><tr><th>So'z</th><th>Ma'no</th></tr>
+    <tr><td>Wer?</td><td>Kim?</td></tr>
+    <tr><td>Was?</td><td>Nima?</td></tr>
+    <tr><td>Wo?</td><td>Qayerda?</td></tr>
+    <tr><td>Wann?</td><td>Qachon?</td></tr>
+    <tr><td>Warum?</td><td>Nima uchun?</td></tr></table>`},
+];
+const defaultQuiz = [
+  {q:'"der Tisch" so\'zining artikli qaysi guruhga tegishli?', opts:['Doira (der)','Uchburchak (die)','Kvadrat (das)'], correct:0},
+  {q:'"Danke" so\'zi nimani anglatadi?', opts:['Salom','Rahmat','Xayr'], correct:1},
+  {q:'"ich ___ " — machen fe\'lining to\'g\'ri shakli qaysi?', opts:['macht','machst','mache'], correct:2},
+  {q:'"das Kind" — bu qaysi artikel guruhi?', opts:['der','die','das'], correct:2},
+  {q:'"Wo?" so\'rog\'i nimani so\'raydi?', opts:['Qachon?','Qayerda?','Kim?'], correct:1},
+];
+
+let lessons = defaultLessons.slice();
+let quizData = defaultQuiz.slice();
+
+function saveLessonsToStore(arr){
+  lessons = arr;
+  if(firebaseReady){ lessonsRef.set(arr); } else { renderAdminLessonList(); }
+}
+function saveQuizToStore(arr){
+  quizData = arr;
+  if(firebaseReady){ quizRef.set(arr); } else { renderAdminQuizList(); }
+}
+if(firebaseReady){
+  lessonsRef.on('value', snap => {
+    lessons = snap.exists() ? snap.val() : (lessonsRef.set(defaultLessons), defaultLessons.slice());
+    renderAdminLessonList();
+  });
+  quizRef.on('value', snap => {
+    quizData = snap.exists() ? snap.val() : (quizRef.set(defaultQuiz), defaultQuiz.slice());
+    renderAdminQuizList();
+  });
+}
+
+/* ---------- Auth ---------- */
+function adminLogin(){
+  const val = document.getElementById('adminPass').value;
+  if(val === ADMIN_CODE){
+    sessionStorage.setItem('sprachwerk_admin', '1');
+    document.getElementById('adminGate').style.display='none';
+    document.getElementById('adminPanelWrap').style.display='block';
+    renderAdminLessonList();
+    renderAdminQuizList();
+  } else {
+    document.getElementById('adminError').textContent = "Noto'g'ri kod. Qayta urinib ko'ring.";
+  }
+}
+function adminLogout(){
+  sessionStorage.removeItem('sprachwerk_admin');
+  document.getElementById('adminGate').style.display='block';
+  document.getElementById('adminPanelWrap').style.display='none';
+  document.getElementById('adminPass').value = '';
+}
+if(sessionStorage.getItem('sprachwerk_admin') === '1'){
+  document.getElementById('adminGate').style.display='none';
+  document.getElementById('adminPanelWrap').style.display='block';
+}
+
+/* ---------- Tabs ---------- */
+function switchTab(id){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.toggle('active', p.id===id));
+  if(id==='tabLessons') renderAdminLessonList();
+  if(id==='tabQuiz') renderAdminQuizList();
+}
+
+/* ---------- Lessons CRUD ---------- */
+function renderAdminLessonList(){
+  const list = document.getElementById('adminLessonList');
+  if(!list) return;
+  if(lessons.length===0){ list.innerHTML = '<div class="admin-empty">Hozircha darslar yo\'q.</div>'; return; }
+  list.innerHTML = lessons.map((l,i)=>`
+    <div class="admin-row">
+      <span class="arow-tag">${l.lvl}</span>
+      <span class="arow-title">${l.title}</span>
+      <button class="btn small ghost" onclick="editLesson(${i})">Tahrirlash</button>
+      <button class="btn small danger" onclick="deleteLesson(${i})">O'chirish</button>
+    </div>`).join('');
+}
+function resetLessonForm(){
+  document.getElementById('lessonEditIndex').value = -1;
+  document.getElementById('lessonFormTitle').textContent = "Yangi dars qo'shish";
+  document.getElementById('lFieldTitle').value = '';
+  document.getElementById('lFieldLevel').value = 'A1';
+  document.getElementById('lFieldBody').value = '';
+}
+function editLesson(i){
+  const l = lessons[i];
+  document.getElementById('lessonEditIndex').value = i;
+  document.getElementById('lessonFormTitle').textContent = "Darsni tahrirlash";
+  document.getElementById('lFieldTitle').value = l.title;
+  document.getElementById('lFieldLevel').value = l.lvl;
+  document.getElementById('lFieldBody').value = l.body;
+  document.querySelector('#tabLessons .admin-form').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function deleteLesson(i){
+  if(!confirm("Darsni o'chirishni tasdiqlaysizmi?")) return;
+  const arr = lessons.slice();
+  arr.splice(i,1);
+  saveLessonsToStore(arr);
+}
+function saveLessonForm(){
+  const title = document.getElementById('lFieldTitle').value.trim();
+  const lvl = document.getElementById('lFieldLevel').value;
+  const body = document.getElementById('lFieldBody').value.trim();
+  if(!title || !body){ alert("Sarlavha va mazmunni to'ldiring."); return; }
+  const idx = parseInt(document.getElementById('lessonEditIndex').value, 10);
+  const arr = lessons.slice();
+  if(idx >= 0){ arr[idx] = {lvl, title, body}; }
+  else { arr.push({lvl, title, body}); }
+  saveLessonsToStore(arr);
+  resetLessonForm();
+}
+
+/* ---------- Quiz CRUD ---------- */
+function renderAdminQuizList(){
+  const list = document.getElementById('adminQuizList');
+  if(!list) return;
+  if(quizData.length===0){ list.innerHTML = '<div class="admin-empty">Hozircha savollar yo\'q.</div>'; return; }
+  list.innerHTML = quizData.map((q,i)=>`
+    <div class="admin-row">
+      <span class="arow-title">${q.q}</span>
+      <button class="btn small ghost" onclick="editQuiz(${i})">Tahrirlash</button>
+      <button class="btn small danger" onclick="deleteQuiz(${i})">O'chirish</button>
+    </div>`).join('');
+}
+function resetQuizForm(){
+  document.getElementById('quizEditIndex').value = -1;
+  document.getElementById('quizFormTitle').textContent = "Yangi savol qo'shish";
+  document.getElementById('qFieldText').value = '';
+  document.getElementById('qOpt0').value = '';
+  document.getElementById('qOpt1').value = '';
+  document.getElementById('qOpt2').value = '';
+  document.querySelector('input[name=correctOpt][value="0"]').checked = true;
+}
+function editQuiz(i){
+  const q = quizData[i];
+  document.getElementById('quizEditIndex').value = i;
+  document.getElementById('quizFormTitle').textContent = "Savolni tahrirlash";
+  document.getElementById('qFieldText').value = q.q;
+  document.getElementById('qOpt0').value = q.opts[0] || '';
+  document.getElementById('qOpt1').value = q.opts[1] || '';
+  document.getElementById('qOpt2').value = q.opts[2] || '';
+  const radios = document.querySelectorAll('input[name=correctOpt]');
+  radios.forEach(r=>r.checked = (parseInt(r.value,10)===q.correct));
+  document.querySelector('#tabQuiz .admin-form').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function deleteQuiz(i){
+  if(!confirm("Savolni o'chirishni tasdiqlaysizmi?")) return;
+  const arr = quizData.slice();
+  arr.splice(i,1);
+  saveQuizToStore(arr);
+}
+function saveQuizForm(){
+  const text = document.getElementById('qFieldText').value.trim();
+  const opts = [document.getElementById('qOpt0').value.trim(), document.getElementById('qOpt1').value.trim(), document.getElementById('qOpt2').value.trim()].filter(o=>o);
+  if(!text || opts.length < 2){ alert("Savol matni va kamida 2 ta variant kiriting."); return; }
+  const correct = parseInt(document.querySelector('input[name=correctOpt]:checked').value, 10);
+  if(correct >= opts.length){ alert("To'g'ri javob sifatida bo'sh bo'lmagan variantni tanlang."); return; }
+  const idx = parseInt(document.getElementById('quizEditIndex').value, 10);
+  const entry = {q:text, opts, correct};
+  const arr = quizData.slice();
+  if(idx >= 0){ arr[idx] = entry; }
+  else { arr.push(entry); }
+  saveQuizToStore(arr);
+  resetQuizForm();
+}
+
+/* ---------- Data management ---------- */
+function exportData(){
+  const payload = {lessons, quiz: quizData, exportedAt: new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sprachwerk-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('dataStatus').textContent = "Eksport qilindi: sprachwerk-data.json";
+}
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(Array.isArray(data.lessons)){ saveLessonsToStore(data.lessons); }
+      if(Array.isArray(data.quiz)){ saveQuizToStore(data.quiz); }
+      document.getElementById('dataStatus').textContent = "Import muvaffaqiyatli yakunlandi.";
+    }catch(err){
+      document.getElementById('dataStatus').textContent = "Xatolik: fayl noto'g'ri formatda.";
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+function resetAllData(){
+  if(!confirm("Barcha darslar va savollar boshlang'ich holatga qaytariladi. Davom etasizmi?")) return;
+  saveLessonsToStore(defaultLessons.slice());
+  saveQuizToStore(defaultQuiz.slice());
+  document.getElementById('dataStatus').textContent = "Boshlang'ich holatga qaytarildi.";
+}
+
+/* init */
+renderAdminLessonList();
+renderAdminQuizList();
+</script>
+</body>
+</html>
