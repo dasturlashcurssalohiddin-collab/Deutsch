@@ -102,7 +102,8 @@
 
   .chat-shell{border:2px solid var(--ink);background:var(--paper-2);display:flex;flex-direction:column;height:520px;max-width:640px;}
   .chat-log{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;}
-  .bubble{max-width:80%;padding:11px 15px;font-size:14.5px;border:1.5px solid var(--ink);}
+  .bubble{max-width:80%;padding:12px 16px;font-size:14.5px;border:1.5px solid var(--ink);white-space:pre-wrap;line-height:1.6;}
+  .bubble.bot{max-width:88%;}
   .bubble.bot{background:var(--paper);align-self:flex-start;border-bottom-left-radius:0;}
   .bubble.user{background:var(--yellow);align-self:flex-end;border-bottom-right-radius:0;}
   .bubble.thinking{color:var(--grey);font-style:italic;}
@@ -461,7 +462,7 @@ const GROQ_MODEL = 'openai/gpt-oss-20b';
 // Default kalit koddagi shu yerga yoziladi (foydalanuvchi so'rovi bo'yicha).
 // DIQQAT: bu fayl ochiq ulashilsa yoki manba kodi ko'rilsa, kalit ham ko'rinadi.
 const DEFAULT_GROQ_KEY = "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";
-const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring odatda qisqa (3-5 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy nasriy matn yoz, xuddi telefonda do'stingga yozayotgandek.";
+const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, lekin nemischa so'z va jumlalarni tuchnoq keltir va ularning talaffuzi/ma'nosini izohla. Javoblaring odatda qisqa (2-4 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar bir nechta misol yoki jumla keltirsang, HAR BIRINI YANGI QATORDA yoz (ular orasiga bo'sh qator qo'y), hech qachon hammasini bitta uzun paragrafga zichlab yozma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy nasriy matn yoz, xuddi telefonda do'stingga yozayotgandek, lekin har bir alohida fikr/misolni yangi qatordan boshla.";
 
 const chatLog = document.getElementById('chatLog');
 const keyInput = document.getElementById('groqKey');
