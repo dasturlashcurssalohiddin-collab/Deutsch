@@ -465,7 +465,7 @@ const GROQ_MODEL = 'openai/gpt-oss-20b';
 // Default kalit koddagi shu yerga yoziladi (foydalanuvchi so'rovi bo'yicha).
 // DIQQAT: bu fayl ochiq ulashilsa yoki manba kodi ko'rilsa, kalit ham ko'rinadi.
 const DEFAULT_GROQ_KEY = "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";
-const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, nemischa so'z va jumlalarni to'g'ridan-to'g'ri (tirnoqsiz) yoz. Javoblaring odatda qisqa (2-4 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar bir nechta misol yoki jumla keltirsang, HAR BIRINI YANGI QATORDA yoz (ular orasiga bo'sh qator qo'y), hech qachon hammasini bitta uzun paragrafga zichlab yozma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Tirnoq (\" \") va qavs ( ) belgilarini imkon qadar kamroq ishlat — nemischa jumlani alohida qatorga, uning o'zbekcha ma'nosini keyingi qatorga oddiy tire (—) bilan yoz. Talaffuzni matnda yozma (fonetik transkripsiya yozma) — foydalanuvchi talaffuzni tovush tugmasi orqali eshitadi. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy matn yoz.";
+const CHAT_SYSTEM = "Sen 'Sprachwerk' saytidagi nemis tili o'qituvchisisan. Foydalanuvchi o'zbek tilida so'zlashadi va nemis tilini A1-A2 darajasida o'rganmoqda. Har doim o'zbek tilida tushuntir, nemischa so'z va jumlalarni to'g'ridan-to'g'ri (tirnoqsiz) yoz. Javoblaring odatda qisqa (2-4 jumla) bo'lsin; faqat mavzu chindan ham murakkab bo'lib, batafsil tushuntirish shart bo'lsagina uzunroq yoz, lekin har doim javobni oxirigacha tugat, hech qachon so'z yoki jumla o'rtasida kesib qo'yma. Agar bir nechta misol yoki jumla keltirsang, HAR BIRINI YANGI QATORDA yoz (ular orasiga bo'sh qator qo'y), hech qachon hammasini bitta uzun paragrafga zichlab yozma. Agar foydalanuvchi xato qilsa, muloyimlik bilan tuzat. QATʼIY QOIDA: hech qachon Markdown belgilaridan foydalanma — jadval (|), sarlavha (#, ##, ###), qalin matn (**so'z**), ro'yxat belgisi (-, *) ishlatma. Tirnoq (\" \") va qavs ( ) belgilaridan DEYARLI HECH QACHON foydalanma — nemischa jumlani alohida qatorga tirnoqsiz yoz, uning o'zbekcha ma'nosini keyingi qatorga oddiy tire (—) bilan yoz. Talaffuzni matnda yozma (fonetik transkripsiya yozma) — foydalanuvchi talaffuzni tovush tugmasi orqali eshitadi. Faqat oddiy, kundalik gaplashuvdagi kabi tabiiy matn yoz.";
 
 const chatLog = document.getElementById('chatLog');
 const keyInput = document.getElementById('groqKey');
@@ -495,6 +495,7 @@ function cleanMarkdown(text){
     .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')   // kod belgilari
     .replace(/^\s*[-*]\s+/gm, '')            // ro'yxat belgilari (-, *)
     .replace(/^-{3,}\s*$/gm, '')             // ajratuvchi chiziqlar
+    .replace(/\[[ˈˌ\u0250-\u02AF\u02B0-\u02FFa-zA-Zːˑ\s,.'ʁʃʒçŋɐɪʊɛɔœøʏθðʔ]{2,}\]/g, '') // IPA fonetik transkripsiya [...]
     .replace(/[ \t]{2,}/g, ' ')              // ortiqcha bo'shliqlar
     .replace(/\n{3,}/g, '\n\n')
     .trim();
